@@ -1,0 +1,87 @@
+package br.com.gdarlan.technews.ui.activity
+import android.content.Intent
+import androidx.recyclerview.widget.LinearLayoutManager.VERTICAL
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Bundle
+import android.util.Log
+import androidx.lifecycle.ViewModelProviders
+import androidx.recyclerview.widget.DividerItemDecoration
+import br.com.gdarlan.technews.R
+import br.com.gdarlan.technews.database.AppDatabase
+import br.com.gdarlan.technews.model.Noticia
+import br.com.gdarlan.technews.repository.NoticiaRepository
+import br.com.gdarlan.technews.ui.activity.extensions.mostraErro
+import br.com.gdarlan.technews.ui.recyclerview.adapter.ListaNoticiasAdapter
+import br.com.gdarlan.technews.ui.viewmodel.ListaNoticiasViewModel
+import kotlinx.android.synthetic.main.activity_lista_noticias.*
+
+private const val TITULO_APPBAR = "Notícias"
+private const val MENSAGEM_FALHA_CARREGAR_NOTICIAS = "Não foi possível carregar as novas notícias"
+class ListaNoticiasActivity : AppCompatActivity() {
+
+    private val repository by lazy {
+        NoticiaRepository(AppDatabase.getInstance(this).noticiaDAO)
+    }
+    private val adapter by lazy {
+        ListaNoticiasAdapter(context = this)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_lista_noticias)
+        title = TITULO_APPBAR
+        configuraRecyclerView()
+        configuraFabAdicionaNoticia()
+
+        val provedor = ViewModelProviders.of(this)
+        val viewModel = provedor.get(ListaNoticiasViewModel::class.java)
+
+        Log.i("viewmodel", viewModel.toString())
+    }
+
+    override fun onResume() {
+        super.onResume()
+        buscaNoticias()
+    }
+
+    private fun configuraFabAdicionaNoticia() {
+        activity_lista_noticias_fab_salva_noticia.setOnClickListener {
+            abreFormularioModoCriacao()
+        }
+    }
+
+    private fun configuraRecyclerView() {
+        val divisor = DividerItemDecoration(this, VERTICAL)
+        activity_lista_noticias_recyclerview.addItemDecoration(divisor)
+        activity_lista_noticias_recyclerview.adapter = adapter
+        configuraAdapter()
+    }
+
+    private fun configuraAdapter() {
+        adapter.quandoItemClicado = this::abreVisualizadorNoticia
+    }
+
+    private fun buscaNoticias() {
+        repository.buscaTodos(
+            quandoSucesso = {
+                adapter.atualiza(it)
+            }, quandoFalha = {
+                mostraErro(MENSAGEM_FALHA_CARREGAR_NOTICIAS)
+            }
+        )
+    }
+
+    private fun abreFormularioModoCriacao() {
+        val intent = Intent(this, FormularioNoticiaActivity::class.java)
+        startActivity(intent)
+    }
+
+    private fun abreVisualizadorNoticia(it: Noticia) {
+        val intent = Intent(this, VisualizaNoticiaActivity::class.java)
+        intent.putExtra(NOTICIA_ID_CHAVE, it.id)
+        startActivity(intent)
+    }
+
+
+
+}
